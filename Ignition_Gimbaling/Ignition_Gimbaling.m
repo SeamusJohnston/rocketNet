@@ -66,7 +66,7 @@ if sim.simBestRuns
         [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
     end
 else
-    [score, neurons] = initializeScoreNeurons(NN);
+    [score, neurons] = initializeScoresNeurons(NN);
     for run = 1:NN.runsPerGeneration
         sim.run = run;
         [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
