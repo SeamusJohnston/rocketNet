@@ -69,9 +69,16 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
     end
     
     % print progress
-    if rem(sim.run, NN.numInitialGuesses/100) == 0
-        clc
-        percentComplete = 100*sim.run/NN.numInitialGuesses
+    if NN.isTraining
+        if rem(sim.run, NN.runsPerGeneration/100) == 0
+            clc
+            percentComplete = 100*sim.run/NN.runsPerGeneration
+        end
+    else
+        if rem(sim.run, NN.numInitialGuesses/100) == 0
+            clc
+            percentComplete = 100*sim.run/NN.numInitialGuesses
+        end
     end
     
     % Score
