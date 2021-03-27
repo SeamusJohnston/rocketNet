@@ -1,4 +1,6 @@
 function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics)
+    % record initial position and velocity vector for plotting
+    initPos = state.pos_cg;
     for k = 1:sim.steps
         [output1, output2] = runNeuralNet(weights, biases, neurons, state, geometry, NN, sim);
         state.ignite = output1;
@@ -62,14 +64,14 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
         end
 
         if sim.doPlot == true
-           plotRocket(state, geometry, sim) % TODO add %identifier of weights and biases
+           plotRocket(state, geometry, sim, initPos) % TODO add %identifier of weights and biases
         end
     end
     
     % print progress
-    if rem(sim.run, NN.runsPerGeneration/100) == 0
+    if rem(sim.run, NN.numInitialGuesses/100) == 0
         clc
-        percentComplete = 100*sim.run/NN.runsPerGeneration
+        percentComplete = 100*sim.run/NN.numInitialGuesses
     end
     
     % Score
@@ -77,6 +79,7 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
     xDistanceFromPad = abs(state.pos_cg(1) - geometry.pos_pad(1));
     score = vertDistanceFromPad + xDistanceFromPad;
     score = score + abs(state.vel_x);
+    score = score + abs(state.vel_z);
     score = score + abs(state.theta)*.07;
     score = score + abs(state.theta_dot)*.05;
 end

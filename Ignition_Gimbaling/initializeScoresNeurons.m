@@ -8,5 +8,8 @@ function [score, neurons] = initializeScoresNeurons(NN)
     neurons.two = zeros(NN.num_neurons_HL2, 1, 'single');
     neurons.three = zeros(NN.num_neurons_HL3, 1, 'single');
     neurons.out = zeros(NN.num_outputs, 1, 'single');
-    score = zeros(NN.runsPerGeneration, 1, 'single');
+    if NN.isTraining
+        score = zeros(NN.runsPerGeneration, 1, 'single');
+    else
+        score = zeros(NN.numInitialGuesses, 1, 'single');
 end
