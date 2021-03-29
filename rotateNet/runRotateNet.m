@@ -1,4 +1,4 @@
-function runRotateNet(viz)
+function runRotateNet(viz, num_episodes)
     % Train the network off of simulation data
     
     % PARAMETERS
@@ -10,6 +10,8 @@ function runRotateNet(viz)
     
     % Initialize dynamics model
     x_init = [0; h; 0; -v_t; pi/2; 0;];
+    scores_on_impact = []; % scores on impact
+    x_best = []; % best run
     rocket = rocketModel(v_t, fin_angle, x_init);
     
     % Initialize network
@@ -17,36 +19,42 @@ function runRotateNet(viz)
     epsilon = 0.9; % How much we want to explore
     eps_decay = 0.05; % epsilon decay percent every iteration
     net = rotateNet(learnRate, 2, 24, epsilon, eps_decay);
-        
-    % Run the simulation
-    x = x_init;
-    while (rocket.t <= t_sim && ~rocket.impact)
-        
-        % Calculate inputs from net
-        u = net.determineAction(rocket.x);
-        
-        % Simulate dynamics
-        rocket = rocket.stepDynamics(u, dt);
-        rocket = rocket.checkForImpact();
-        
-        % Learn
-        net = net.decay();
-        
-        % Save output
-        x = [x rocket.x];
+    
+    for i = 1:num_episodes
+        % Run the simulation
+        x = x_init;
+        while (rocket.t <= t_sim && ~rocket.impact)
+
+            % Calculate inputs from net
+            [net, u] = net.determineAction(rocket.x);
+
+            % Simulate dynamics
+            prev_state = rocket.x;
+            rocket = rocket.stepDynamics(u, dt);
+            rocket = rocket.checkForImpact();
+
+            % Score the results
+            score = evaluateScore(rocket.x);
+            if rocket.impact
+                scores_on_impact = [scores_on_impact score];
+            end
+
+            % Learn
+            net = net.remember(rocket.impact, u, rocket.x, prev_state, score);
+            net = net.experience_replay(20, rocket, dt);
+
+            % Save output
+            x = [x rocket.x];
+            if score == max(scores_on_impact)
+                x_best = x;
+            end
+        end
     end
     
     % Visualize sim results
     if viz
-        plotResult(x, dt, 1);
+        plotResult(x_best, dt, 1);
     end
-    
-    % Score the results
-    score = evaluateScore(x)
-    
-    % Backpropagation
-    
-    
 end
 
 % best score is 0
