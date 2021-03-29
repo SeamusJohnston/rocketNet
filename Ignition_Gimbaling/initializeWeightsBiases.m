@@ -25,23 +25,53 @@ function [weights, biases] = initializeWeightsBiases(NN, weights, biases)
             weights.out = -.5 + rand(NN.num_neurons_HL1,NN.num_outputs,NN.numInitialGuesses,'single');
         end
         biases.out = -.5 + rand(NN.num_outputs,NN.numInitialGuesses,'single');
-    else % NN is training    
-        weights.one = weights.one(:,:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_inputs,NN.num_neurons_HL1,NN.runsPerGeneration,'single'));
-        biases.one = biases.one(:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL1,NN.runsPerGeneration,'single'));
+    else % NN is training %TODO there is no method by which w&b can switch signs
+        winner = weights.one(:,:,NN.winningIndex);
+        weights.one = winner + winner .* NN.mutationCoef .* ...
+            (rand(NN.num_inputs,NN.num_neurons_HL1,NN.runsPerGeneration)-.5);
+        weights.one(:,:,1) = winner; % keep the first run's weights the same
+        winner = biases.one(:,NN.winningIndex);
+        biases.one = winner + winner .* NN.mutationCoef .* ...
+            (rand(NN.num_neurons_HL1,NN.runsPerGeneration)-.5);
+        biases.one(:,1) = winner;
         if NN.enable_HL2
-            weights.two = weights.two(:,:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL1,NN.num_neurons_HL2,NN.runsPerGeneration,'single'));
-            biases.two = biases.two(:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL2,NN.runsPerGeneration,'single'));
+            winner = weights.two(:,:,NN.winningIndex);
+            weights.two = winner + winner .* NN.mutationCoef .* ...
+                (rand(NN.num_neurons_HL1,NN.num_neurons_HL2,NN.runsPerGeneration)-.5);
+            weights.two(:,:,1) = winner;
+            winner = biases.two(:,NN.winningIndex);
+            biases.two = winner + winner .* NN.mutationCoef .* ...
+                (rand(NN.num_neurons_HL2,NN.runsPerGeneration)-.5);
+            biases.two(:,1) = winner;
             if ~NN.enable_HL3
-                weights.out = weights.out(:,:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL2,NN.num_outputs,NN.runsPerGeneration,'single'));
+                winner = weights.out(:,:,NN.winningIndex);
+                weights.out = winner + winner .* NN.mutationCoef .* ...
+                    (rand(NN.num_neurons_HL2,NN.num_outputs,NN.runsPerGeneration)-.5);
+                weights.out(:,:,1) = winner;
             end
             if NN.enable_HL3
-                weights.three = weights.three(:,:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL2,NN.num_neurons_HL3,NN.runsPerGeneration,'single'));
-                weights.out = weights.out(:,:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL3,NN.num_outputs,NN.runsPerGeneration,'single'));
-                biases.three = biases.three(:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL3,NN.runsPerGeneration,'single'));
+                winner = weights.three(:,:,NN.winningIndex);
+                weights.three = winner + winner .* NN.mutationCoef .* ...
+                    (rand(NN.num_neurons_HL2,NN.num_neurons_HL3,NN.runsPerGeneration)-.5);
+                weights.three(:,:,1) = winner;
+                winner = weights.out(:,:,NN.winningIndex);
+                weights.out = winner + winner .* NN.mutationCoef .* ...
+                    (rand(NN.num_neurons_HL3,NN.num_outputs,NN.runsPerGeneration)-.5);
+                weights.out(:,:,1) = winner;
+                winner = biases.three(:,NN.winningIndex);
+                biases.three = winner + winner .* NN.mutationCoef .* ...
+                    (rand(NN.num_neurons_HL3,NN.runsPerGeneration)-.5);
+                biases.three(:,1) = winner;
             end
         else
-            weights.out = weights.out(:,:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_neurons_HL1,NN.num_outputs,NN.runsPerGeneration,'single'));
+            winner = weights.out(:,:,NN.winningIndex);
+            weights.out = winner + winner .* NN.mutationCoef .* ...
+                (rand(NN.num_neurons_HL1,NN.num_outputs,NN.runsPerGeneration)-.5);
+            weights.out(:,:,1) = winner;
         end
-        biases.out = biases.out(:,NN.winningIndex) + NN.mutationCoef*(-.5 + rand(NN.num_outputs,NN.runsPerGeneration,'single'));
+        winner = biases.out(:,NN.winningIndex);
+        biases.out = winner + winner .* NN.mutationCoef .* ...
+            (rand(NN.num_outputs,NN.runsPerGeneration)-.5);
+        biases.out(:,1) = winner;
     end
 end

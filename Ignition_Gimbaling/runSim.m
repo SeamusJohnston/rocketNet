@@ -62,9 +62,17 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
         if state.pos_cg(3) < -15
             break
         end
-
+        % Score
+        vertDistanceFromPad = abs(state.pos_cg(3) - geometry.pos_pad(3));
+        xDistanceFromPad = abs(state.pos_cg(1) - geometry.pos_pad(1));
+        score = vertDistanceFromPad + xDistanceFromPad*4;
+        score = score + abs(state.vel_x);
+        score = score + abs(state.vel_z);
+        score = score + abs(state.theta)*.13;
+        score = score + abs(state.theta_dot)*.2;
+        % Plot
         if sim.doPlot == true
-           plotRocket(state, geometry, sim, initPos) % TODO add %identifier of weights and biases
+           plotRocket(state, geometry, sim, initPos, NN) % TODO add %identifier of weights and biases
         end
     end
     
@@ -73,6 +81,7 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
         if rem(sim.run, NN.runsPerGeneration/100) == 0
             clc
             percentComplete = 100*sim.run/NN.runsPerGeneration
+            winningScore = NN.winningScore
         end
     else
         if rem(sim.run, NN.numInitialGuesses/100) == 0
@@ -80,13 +89,4 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
             percentComplete = 100*sim.run/NN.numInitialGuesses
         end
     end
-    
-    % Score
-    vertDistanceFromPad = abs(state.pos_cg(3) - geometry.pos_pad(3));
-    xDistanceFromPad = abs(state.pos_cg(1) - geometry.pos_pad(1));
-    score = vertDistanceFromPad + xDistanceFromPad;
-    score = score + abs(state.vel_x);
-    score = score + abs(state.vel_z);
-    score = score + abs(state.theta)*.07;
-    score = score + abs(state.theta_dot)*.05;
 end

@@ -1,7 +1,8 @@
-%clear
+%clear score 190
 clc
-format compact
+format short
 StopLoopinG = 0;
+    %save('V1_4.mat', '-v7.3')
 
 % 1. Make a ton of guess with 1 constant initial state (~100k)
 % 2. Evaluate top ~ 0.01% with varied initial state, accumulate scores, pick winner 
@@ -19,7 +20,8 @@ sim       =      struct('simBestRuns', 0, ...
                         'run', 1, ...
                         'generation', 1 , ... in the family sense
                         'doPlot', 0, ...
-                        'posVariance', 8, ... max variance for initial position when plotting
+                        'xposVariance', 10, ... m, max variance for initial position when plotting
+                        'zposVariance', 6, ... 
                         'delay', .01, ...
                         'timePerStep' , .04); % sec, above .05 sim seems inconsistant 
 
@@ -27,12 +29,14 @@ sim       =      struct('simBestRuns', 0, ...
 NN        =      struct('isTraining' , 1, ... % false triggers initial guesses
                         'doMixUpInitialState' , 1 , ... Turn on for step 4
                         'numVariations' , 3 , ... 
-                        'runsPerGeneration' , 100, ...
+                        'runsPerGeneration' , 25, ...
                         'numGenerations', 10000 , ...
-                        'numInitialGuesses' , 75000, ...
+                        'numInitialGuesses' , 50000, ...
                         'numInitialCandidates', 10, ... num initial winners for step 2
                         'winningIndex', 0, ... % set once per generation
-                        'mutationCoef', .01, ... % multiplier for random change
+                        'winningScore', 0, ... 
+                        'mutationCoef', .02078 , ... % multiplier for random change
+                        'mutationReducer', 1 , ... % % reduction of mutationCoef after success
                         'num_inputs' , 8, ...
                         'num_outputs', 2, ...
                         'num_neurons_HL1' , 12, ...
@@ -62,7 +66,7 @@ state       =   struct(...
                         'vel_x' ,  0, ...         % m/s
                         'vel_z' , -10, ...        % m/s
                         'theta' , 0, ...          % deg, angle of rocket, vertical is zero
-                        'theta_dot' , 0, ...      % deg/s, aka w_rocket
+                        'theta_dot' , -4, ...      % deg/s, aka w_rocket
                         'theta_dot_dot' , 0, ...  % deg/s/s
                         'phi' , 0, ...            % deg, angle of gimble
                         'phi_dot' , 0, ...        % deg/s, aka w_gimbal
@@ -115,29 +119,43 @@ elseif ~NN.isTraining
         delusionScore(run) = delusionScore(run) + runScore;
     end
     [delusionScoreSorted,delusionScoreIndexs] = sort(delusionScore); 
-    %save('12_12_4Mil.mat', '-v7.3')
+    NN.winningIndex = scoreIndexs(delusionScoreIndexs(1));
+    winningIndex = NN.winningIndex;
 elseif NN.isTraining
 % 3. Mutate the new winner over X generations w/ 1 initial state
-    NN.winningIndex = scoreIndexs(delusionScoreIndexs(1));
     for gen = 1:NN.numGenerations
         if StopLoopinG == 1 
             break
         end
+        NN.winningIndex = winningIndex;
         [weights, biases] = initializeWeightsBiases(NN, weights, biases);
         [score, neurons] = initializeScoresNeurons(NN);
         % Generate three random initial positions to be used during step 4
-        initPositions = cell(1,2);
+        initPositions = cell(1,NN.numVariations);
         for i = 1:NN.numVariations
             initPositions{i} = nomInitPos + ...
-                            [sim.posVariance*(-.5+rand), 0, sim.posVariance*(-.5+rand)];
+                            [sim.xposVariance*2*(rand-.5), 0, sim.zposVariance*2*(rand-.5)];
         end
         for run = 1:NN.runsPerGeneration
             sim.run = run;
             sim.generation = gen;
             [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
             score(run) = runScore;
-            % 4. Do ~3 variations of an initial state (i.e. initial pos)
             if NN.doMixUpInitialState
+                % plus four corners
+                state.pos_cg = nomInitPos + [sim.xposVariance 0 sim.zposVariance];
+                [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
+                score(run) = score(run) + runScore;
+                state.pos_cg = nomInitPos + [-sim.xposVariance 0 sim.zposVariance];
+                [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
+                score(run) = score(run) + runScore;
+                state.pos_cg = nomInitPos + [sim.xposVariance 0 -sim.zposVariance];
+                [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
+                score(run) = score(run) + runScore;
+                state.pos_cg = nomInitPos + [-sim.xposVariance 0 -sim.zposVariance];
+                [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
+                score(run) = score(run) + runScore;
+                % 4. Do ~3 variations of an initial state (i.e. initial pos)
                 for i = 1:NN.numVariations
                     state.pos_cg = initPositions{i};
                     [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
@@ -146,13 +164,19 @@ elseif NN.isTraining
             end
         end
         [scoreSorted,scoreIndexs] = sort(score);
+        NN.winningScore = scoreSorted(scoreIndexs(1));
         NN.winningIndex = scoreIndexs(1);
+        if NN.winningIndex == 1
+            NN.mutationCoef = NN.mutationCoef*NN.mutationReducer;
+        end
+        winningIndex = NN.winningIndex;
         % Plot the winner of each generation from a random initial position
         sim.doPlot = true;
         sim.run = NN.winningIndex;
         state.pos_cg = initPositions{1};
         [runScore] = runSim(weights, biases, neurons, sim, geometry, state, NN, physics);
         sim.doPlot = false;
+%         weights.one(5,:,NN.winningIndex)
     end
 else
     error('Error')
