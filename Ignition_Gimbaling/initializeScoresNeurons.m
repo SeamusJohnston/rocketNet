@@ -4,12 +4,13 @@ function [score, neurons] = initializeScoresNeurons(NN)
                      'two', [] , ...
                      'three', [] , ...
                      'out', []);
-    neurons.one = zeros(NN.num_neurons_HL1, 1,'single'); % maybe add in NN.runsPerGeneration in the future
-    neurons.two = zeros(NN.num_neurons_HL2, 1, 'single');
-    neurons.three = zeros(NN.num_neurons_HL3, 1, 'single');
-    neurons.out = zeros(NN.num_outputs, 1, 'single');
+    neurons.one = zeros(1, NN.num_neurons_HL1,'single'); % maybe add in NN.runsPerGeneration in the future
+    neurons.two = zeros(1, NN.num_neurons_HL2, 'single');
+    neurons.three = zeros(1, NN.num_neurons_HL3, 'single');
+    neurons.out = zeros(1, NN.num_outputs, 'single');
     if NN.isTraining
         score = zeros(NN.runsPerGeneration, 1, 'single');
     else
         score = zeros(NN.numInitialGuesses, 1, 'single');
+    end
 end

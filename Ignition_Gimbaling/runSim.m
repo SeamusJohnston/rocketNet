@@ -3,9 +3,16 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
     initPos = state.pos_cg;
     for k = 1:sim.steps
         [output1, output2] = runNeuralNet(weights, biases, neurons, state, geometry, NN, sim);
+        if isnan(output1)
+            errork=k
+            break
+        end
+            
         state.ignite = output1;
         state.phi_dot_dot = output2;
-
+        % Apply gimbal angular accel limit
+        if state.phi_dot_dot > 1000  state.phi_dot_dot =  1000; end
+        if state.phi_dot_dot < -1000  state.phi_dot_dot =  -1000; end
         % Angular Rate of Gimbal
         state.phi_dot = state.phi_dot + state.phi_dot_dot*sim.timePerStep;
         % Apply speed limit
@@ -59,29 +66,35 @@ function [score] = runSim(weights, biases, neurons, sim, geometry, state, NN, ph
         state.pos_cg(1) = state.pos_cg(1) + state.vel_x * sim.timePerStep;
         state.pos_cg(3) = state.pos_cg(3) + state.vel_z * sim.timePerStep;
         % Stop Simulating if we get to far underground
-        if state.pos_cg(3) < -15
+        if state.pos_cg(3) < -150
             break
         end
-        % Score
-        vertDistanceFromPad = abs(state.pos_cg(3) - geometry.pos_pad(3));
-        xDistanceFromPad = abs(state.pos_cg(1) - geometry.pos_pad(1));
-        score = vertDistanceFromPad + xDistanceFromPad*4;
-        score = score + abs(state.vel_x);
-        score = score + abs(state.vel_z);
-        score = score + abs(state.theta)*.13;
-        score = score + abs(state.theta_dot)*.2;
+
         % Plot
         if sim.doPlot == true
            plotRocket(state, geometry, sim, initPos, NN) % TODO add %identifier of weights and biases
         end
     end
     
+    % Score
+    score = 0;
+    vertDistanceFromPad = abs(state.pos_cg(3) - geometry.pos_pad(3));
+    xDistanceFromPad = abs(state.pos_cg(1) - geometry.pos_pad(1));
+    score = vertDistanceFromPad + xDistanceFromPad*.001;
+    score = score + abs(state.vel_x);
+    score = score + abs(state.vel_z);
+    score = score + abs(state.theta)*.13;
+    score = score + abs(state.theta_dot)*.2;
+    
     % print progress
     if NN.isTraining
-        if rem(sim.run, NN.runsPerGeneration/100) == 0
-            clc
-            percentComplete = 100*sim.run/NN.runsPerGeneration
-            winningScore = NN.winningScore
+        if ~NN.goWeightByWeight
+            if rem(sim.run, NN.runsPerGeneration/100) == 0
+                clc
+                percentComplete = 100*sim.run/NN.runsPerGeneration
+                winningScore = NN.winningScore
+                secondPlace = NN.secondPlace
+            end
         end
     else
         if rem(sim.run, NN.numInitialGuesses/100) == 0
